@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スネークゲーム</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            color: white;
+            margin: 0 0 10px 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .mode-selection {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .mode-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .mode-btn.active {
+            background: rgba(255, 255, 255, 0.5);
+            border-color: white;
+        }
+        
+        .game-area {
+            display: none;
+        }
+        
+        .game-area.active {
+            display: block;
+        }
+        
+        .score {
+            color: #FFD700;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        canvas {
+            border: 4px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            background: #222;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            color: white;
+            opacity: 0.8;
+        }
+        
+        .touch-controls {
+            display: none;
+            margin-top: 15px;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+        
+        .control-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+        }
+        
+        .control-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .touch-controls {
+                display: flex;
+                flex-direction: column;
+            }
+            .controls {
+                display: none;
+            }
+            canvas {
+                width: 300px;
+                height: 300px;
+            }
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        .restart-btn {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: transform 0.2s;
+        }
+        
+        .restart-btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🐍スネークゲーム</h1>
+        
+        <div class="mode-selection" id="modeSelection">
+            <button class="mode-btn active" onclick="selectMode('single')">
+                モード1: 1個ずつ（従来）
+            </button>
+            <button class="mode-btn" onclick="selectMode('multiple')">
+                モード2: 1秒ごとに増える
+            </button>
+        </div>
+        
+        <div class="game-area active" id="gameArea">
+            <div class="score">スコア: <span id="score">0</span></div>
+            <canvas id="gameCanvas" width="400" height="400"></canvas>
+            <div class="controls">
+                矢印キーまたはWASDで操作
+            </div>
+            
+            <div class="touch-controls">
+                <div class="control-row">
+                    <div class="control-btn" data-direction="up">↑</div>
+                </div>
+                <div class="control-row">
+                    <div class="control-btn" data-direction="left">←</div>
+                    <div class="control-btn" data-direction="down">↓</div>
+                    <div class="control-btn" data-direction="right">→</div>
+                </div>
+            </div>
+            
+            <div class="game-over" id="gameOver">
+                <h2>ゲームオーバー!</h2>
+                <p>最終スコア: <span id="finalScore">0</span></p>
+                <button class="restart-btn" onclick="goToModeSelection()">モード選択に戻る</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const gameOverElement = document.getElementById('gameOver');
+        const finalScoreElement = document.getElementById('finalScore');
+        const modeSelection = document.getElementById('modeSelection');
+        const gameArea = document.getElementById('gameArea');
+
+        // ゲーム設定
+        const GRID_SIZE = 20;
+        const CANVAS_SIZE = 400;
+        
+        // ゲーム状態
+        let snake = [{x: 200, y: 200}];
+        let direction = {x: 0, y: 0};
+        let foods = [];
+        let score = 0;
+        let gameRunning = false;
+        let currentMode = null;
+        let foodSpawnInterval = null;
+        let gameLoopInterval = null;
+
+        // 食べ物の生成
+        function generateFood() {
+            let newFood;
+            let attempts = 0;
+            
+            do {
+                newFood = {
+                    x: Math.floor(Math.random() * (CANVAS_SIZE / GRID_SIZE)) * GRID_SIZE,
+                    y: Math.floor(Math.random() * (CANVAS_SIZE / GRID_SIZE)) * GRID_SIZE
+                };
+                attempts++;
+            } while (attempts < 50 && 
+                (snake.some(s => s.x === newFood.x && s.y === newFood.y) || 
+                 foods.some(f => f.x === newFood.x && f.y === newFood.y)));
+            
+            return newFood;
+        }
+
+        // 蛇の描画
+        function drawSnake() {
+            snake.forEach((segment, index) => {
+                ctx.fillStyle = index === 0 ? '#4ECDC4' : '#45B7B8';
+                ctx.fillRect(segment.x, segment.y, GRID_SIZE - 2, GRID_SIZE - 2);
+                
+                if (index === 0) {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(segment.x + 5, segment.y + 5, 3, 3);
+                    ctx.fillRect(segment.x + 12, segment.y + 5, 3, 3);
+                }
+            });
+        }
+
+        // 食べ物の描画
+        function drawFood() {
+            foods.forEach(food => {
+                ctx.fillStyle = '#FF6B6B';
+                ctx.beginPath();
+                ctx.arc(food.x + GRID_SIZE/2, food.y + GRID_SIZE/2, GRID_SIZE/2 - 1, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                ctx.fillStyle = '#FFB6C1';
+                ctx.beginPath();
+                ctx.arc(food.x + GRID_SIZE/2 - 3, food.y + GRID_SIZE/2 - 3, 3, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+        }
+
+        // 蛇の移動
+        function moveSnake() {
+            if (direction.x === 0 && direction.y === 0) {
+                return;
+            }
+            
+            const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+            
+            if (head.x < 0 || head.x >= CANVAS_SIZE || head.y < 0 || head.y >= CANVAS_SIZE) {
+                gameOver();
+                return;
+            }
+            
+            for (let segment of snake) {
+                if (head.x === segment.x && head.y === segment.y) {
+                    gameOver();
+                    return;
+                }
+            }
+            
+            snake.unshift(head);
+            
+            let foodEaten = false;
+            for (let i = 0; i < foods.length; i++) {
+                if (head.x === foods[i].x && head.y === foods[i].y) {
+                    score += 10;
+                    scoreElement.textContent = score;
+                    foods.splice(i, 1);
+                    foodEaten = true;
+                    
+                    // モード1の場合、新しい食べ物を追加
+                    if (currentMode === 'single') {
+                        foods.push(generateFood());
+                    }
+                    break;
+                }
+            }
+            
+            if (!foodEaten) {
+                snake.pop();
+            }
+        }
+
+        // 画面のクリア
+        function clearCanvas() {
+            ctx.fillStyle = '#222';
+            ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        }
+
+        // ゲームオーバー処理
+        function gameOver() {
+            gameRunning = false;
+            finalScoreElement.textContent = score;
+            gameOverElement.style.display = 'block';
+            if (foodSpawnInterval) {
+                clearInterval(foodSpawnInterval);
+            }
+            if (gameLoopInterval) {
+                clearInterval(gameLoopInterval);
+            }
+        }
+
+        // ゲームループ
+        function gameLoop() {
+            if (gameRunning) {
+                clearCanvas();
+                moveSnake();
+                drawFood();
+                drawSnake();
+            }
+        }
+
+        // キー入力処理
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            handleInput(e.key);
+        });
+
+        // タッチボタン操作処理
+        document.querySelectorAll('.control-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (!gameRunning) return;
+                const dir = e.target.dataset.direction;
+                handleInput(dir);
+            });
+        });
+
+        // スワイプ操作処理
+        let touchStartX = null;
+        let touchStartY = null;
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (!gameRunning || touchStartX === null || touchStartY === null) return;
+
+            const touch = e.changedTouches[0];
+            const touchEndX = touch.clientX;
+            const touchEndY = touch.clientY;
+
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+
+            const minSwipeDistance = 30;
+
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                if (Math.abs(deltaX) > minSwipeDistance) {
+                    if (deltaX > 0) {
+                        handleInput('right');
+                    } else {
+                        handleInput('left');
+                    }
+                }
+            } else {
+                if (Math.abs(deltaY) > minSwipeDistance) {
+                    if (deltaY > 0) {
+                        handleInput('down');
+                    } else {
+                        handleInput('up');
+                    }
+                }
+            }
+
+            touchStartX = null;
+            touchStartY = null;
+        });
+
+        // 入力処理の統一化
+        function handleInput(input) {
+            switch(input) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                case 'up':
+                    if (direction.y === 0) {
+                        direction = {x: 0, y: -GRID_SIZE};
+                    }
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                case 'down':
+                    if (direction.y === 0) {
+                        direction = {x: 0, y: GRID_SIZE};
+                    }
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                case 'left':
+                    if (direction.x === 0) {
+                        direction = {x: -GRID_SIZE, y: 0};
+                    }
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                case 'right':
+                    if (direction.x === 0) {
+                        direction = {x: GRID_SIZE, y: 0};
+                    }
+                    break;
+            }
+        }
+
+        // モード選択
+        function selectMode(mode) {
+            currentMode = mode;
+            
+            // UI更新
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // ゲーム初期化
+            snake = [{x: 200, y: 200}];
+            direction = {x: 0, y: 0};
+            foods = [];
+            score = 0;
+            gameRunning = true;
+            scoreElement.textContent = score;
+            gameOverElement.style.display = 'none';
+            
+            // 初期表示
+            clearCanvas();
+            foods.push(generateFood());
+            
+            if (mode === 'multiple') {
+                // モード2：1秒ごとに食べ物が増える
+                foodSpawnInterval = setInterval(() => {
+                    if (gameRunning) {
+                        foods.push(generateFood());
+                    }
+                }, 1000);
+            }
+            
+            // ゲームループ開始
+            if (gameLoopInterval) clearInterval(gameLoopInterval);
+            gameLoopInterval = setInterval(gameLoop, 150);
+            
+            drawFood();
+            drawSnake();
+        }
+
+        // モード選択画面に戻る
+        function goToModeSelection() {
+            gameRunning = false;
+            if (foodSpawnInterval) clearInterval(foodSpawnInterval);
+            if (gameLoopInterval) clearInterval(gameLoopInterval);
+            gameOverElement.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
